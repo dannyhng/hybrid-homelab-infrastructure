@@ -1,66 +1,54 @@
 ---
-- name: Site playbook - Webservers
-  hosts: webservers
-  become: true
-  vars:
-    http_port: 80
+- name: Hybrid Homelab Maintenance
+  hosts: all
+  gather_facts: yes
+  become: yes
+
   tasks:
-    - name: Ensure nginx is installed (Debian family)
-      ansible.builtin.apt:
-        name: nginx
-        state: present
-        update_cache: yes
-      when: ansible_facts['os_family'] == 'Debian'
+    - name: Check connectivity to all infrastructure
+      ping:
 
-    - name: Ensure nginx is installed (RedHat family)
-      ansible.builtin.yum:
-        name: nginx
-        state: present
-      when: ansible_facts['os_family'] == 'RedHat'
-
-    - name: Ensure nginx service is running and enabled
-      ansible.builtin.service:
-        name: nginx
-        state: started
-        enabled: true
-
-    - name: Deploy simple index.html
-      ansible.builtin.copy:
-        dest: /var/www/html/index.html
-        content: |
-          <html>
-          <body>
-            <h1>Hello from {{ inventory_hostname }}</h1>
-          </body>
-          </html>
-        mode: '0644'
-
-- name: Site playbook - DBservers
-  hosts: dbservers
-  become: true
+- name: Update Physical Compute Nodes (Ubuntu)
+  hosts: compute
+  become: yes
   tasks:
-    - name: Ensure PostgreSQL is installed (Debian family)
-      ansible.builtin.apt:
-        name: postgresql
-        state: present
+    - name: Update apt repo and cache
+      apt:
         update_cache: yes
-      when: ansible_facts['os_family'] == 'Debian'
+        force_apt_get: yes
+        cache_valid_time: 3600
 
-    - name: Ensure PostgreSQL is installed (RedHat family)
-      ansible.builtin.yum:
-        name: postgresql-server
-        state: present
-      when: ansible_facts['os_family'] == 'RedHat'
+    - name: Upgrade all apt packages
+      apt:
+        upgrade: dist
+        force_apt_get: yes
 
-    - name: Ensure PostgreSQL service is running and enabled
-      ansible.builtin.service:
-        name: postgresql
-        state: started
-        enabled: true
+    - name: Check if a reboot is required
+      stat:
+        path: /var/run/reboot-required
+      register: reboot_required_file
 
-    - name: Create a test DB (skipped if exists)
-      ansible.builtin.postgresql_db:
-        name: exampledb
-      become_user: postgres
-      ignore_errors: true
+    - name: Reboot if kernel updated
+      reboot:
+        msg: "Rebooting due to kernel updates"
+        connect_timeout: 5
+        reboot_timeout: 600
+        pre_reboot_delay: 0
+        post_reboot_delay: 30
+        test_command: whoami
+      when: reboot_required_file.stat.exists
 
+- name: Storage Health Check (TrueNAS)
+  hosts: storage
+  gather_facts: no
+  tasks:
+    # We use 'command' here because TrueNAS is an appliance
+    # In a real scenario, we would use the TrueNAS API module
+    - name: Check ZFS Pool Status
+      command: zpool status
+      register: zpool_output
+      changed_when: false
+
+    - name: Display ZFS Status
+      debug:
+        msg: "{{ zpool_output.stdout_lines }}"
