@@ -1,0 +1,66 @@
+---
+- name: Site playbook - Webservers
+  hosts: webservers
+  become: true
+  vars:
+    http_port: 80
+  tasks:
+    - name: Ensure nginx is installed (Debian family)
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        update_cache: yes
+      when: ansible_facts['os_family'] == 'Debian'
+
+    - name: Ensure nginx is installed (RedHat family)
+      ansible.builtin.yum:
+        name: nginx
+        state: present
+      when: ansible_facts['os_family'] == 'RedHat'
+
+    - name: Ensure nginx service is running and enabled
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+
+    - name: Deploy simple index.html
+      ansible.builtin.copy:
+        dest: /var/www/html/index.html
+        content: |
+          <html>
+          <body>
+            <h1>Hello from {{ inventory_hostname }}</h1>
+          </body>
+          </html>
+        mode: '0644'
+
+- name: Site playbook - DBservers
+  hosts: dbservers
+  become: true
+  tasks:
+    - name: Ensure PostgreSQL is installed (Debian family)
+      ansible.builtin.apt:
+        name: postgresql
+        state: present
+        update_cache: yes
+      when: ansible_facts['os_family'] == 'Debian'
+
+    - name: Ensure PostgreSQL is installed (RedHat family)
+      ansible.builtin.yum:
+        name: postgresql-server
+        state: present
+      when: ansible_facts['os_family'] == 'RedHat'
+
+    - name: Ensure PostgreSQL service is running and enabled
+      ansible.builtin.service:
+        name: postgresql
+        state: started
+        enabled: true
+
+    - name: Create a test DB (skipped if exists)
+      ansible.builtin.postgresql_db:
+        name: exampledb
+      become_user: postgres
+      ignore_errors: true
+
