@@ -6,10 +6,11 @@
 ![Automation](https://img.shields.io/badge/IAC-Ansible-red)
 ![Monitoring](https://img.shields.io/badge/Observability-Prometheus%20%7C%20Grafana-green)
 
-## Executive Summary
-This project documents the design, implementation, and automation of a **Hybrid Enterprise Network**. Unlike standard virtualized labs, this architecture separates **Critical Infrastructure** (Virtual Routing/Storage) from **High-Performance Compute** (Bare Metal Docker Host) to eliminate single points of failure.
+## Project Overview
 
-The environment simulates a modern **Zero-Trust (ZTNA)** network using SD-WAN overlays, containerized microservices, and full-stack observability.
+This repository documents the architecture and automation of a hybrid network environment. The design separates **Critical Infrastructure** (Virtual Routing/Storage) from **Compute Resources** (Bare Metal Docker Host) to ensure network stability during high-load operations.
+
+The environment utilizes a **Zero-Trust (ZTNA)** approach for remote access, replacing legacy port-forwarding with SD-WAN overlays.
 
 ---
 
@@ -66,61 +67,52 @@ graph TD
     class pfSense,TrueNAS,AdGuard,PBS,Docker virtual;
 
 ```
+# System Architecture
 
-### 1. Physical & Virtual Infrastructure Layer
-**Architecture Type:** Hybrid (Type-1 Hypervisor + Bare Metal)
+### 1. Infrastructure Layer (Hybrid)
 
-| Node | Hardware | OS | Role |
-| :--- | :--- | :--- | :--- |
-| **Host A** | Dell OptiPlex 7070 | **Proxmox VE** | **Critical Infra:** Hosting Router, Storage, DNS, and Backup systems. |
-| **Host B** | Physical PC | **Ubuntu Server 24.04** | **Compute:** Dedicated Docker Engine for high-performance application hosting. |
+The lab utilizes a split-resource model to prevent compute exhaustion from impacting network routing.
+* **Host A (Dell OptiPlex 7070):** Runs **Proxmox VE**. Hosts critical "always-on" services (Router, DNS, NAS).
 
-* **Engineering Decision:** Decoupling the "Compute" node from the "Router" node ensures that an application crash (OOM) on the Docker host does not take down the internet connection or DNS for the rest of the network.
+* **Host B (Physical PC):** Runs **Ubuntu Server 24.04**. Dedicated bare-metal host for Docker containers.
 
-### 2. Network Core: Routing & Zero Trust (SD-WAN)
-**Technology:** pfSense Firewall (VM) + Tailscale
-* **Segmentation:** Defined strict VLAN/Subnet separation (`192.168.1.0/24` LAN vs `10.0.0.x` ISP).
-* **Zero Trust Access:** Implemented **Tailscale** directly on the firewall as a Subnet Router.
-    * **Exit Node:** Routes remote traffic through the secure home ISP connection (Masking IP).
-    * **No Port Forwarding:** Eliminated open WAN ports to reduce attack surface.
 
-### 3. DNS Strategy & Traffic Control
-**Technology:** AdGuard Home (LXC)
-* **Split-Horizon DNS:** Configured DNS rewrites to map internal domains (`grafana.homelab.local`) to local IPs.
-* **Global Filtering:** Integrated with Tailscale to enforce ad-blocking on mobile devices even when on cellular 5G networks.
+### 2. Networking & Security
 
-### 4. Application Layer & Reverse Proxy
-**Technology:** Docker, Nginx Proxy Manager (NPM), Portainer
-* **Reverse Proxy:** Deployed NPM to handle HTTP traffic routing, enabling domain-name access (`http://app.homelab.local`) instead of IP:Port management.
-* **Proxmox Proxying:** Configured Websocket support to proxy the Proxmox console securely through standard HTTPS ports.
+* **Edge Firewall:** pfSense acting as the primary gateway (`192.168.1.1`), managing VLANs and strictly separating lab traffic from the ISP network.
 
-### 5. Observability: The Monitoring Stack
-**Technology:** Prometheus, Node Exporter, Grafana
-* **Implementation:**
-    * **Node Exporter:** Deployed with `--net=host` to scrape raw kernel metrics (CPU/RAM/Disk/Network I/O) from the bare metal host.
-    * **Prometheus:** Scrapes metrics from `localhost:9100`.
-    * **Grafana:** Visualizes data using Dashboard ID 1860 (Node Exporter Full).
-* **Impact:** Provides "Single Pane of Glass" visibility for Capacity Planning and Site Reliability Engineering (SRE).
+* **Remote Access:** Tailscale installed directly on pfSense as a Subnet Router. This allows secure access to internal IPs (`192.168.1.x`) without exposing ports to the WAN.
 
-### 6. Storage & Disaster Recovery
-**Technology:** TrueNAS Scale (VM) & Proxmox Backup Server (PBS)
-* **Disk Passthrough:** Manually mapped physical disks to the VM via unique serial numbers to allow ZFS direct hardware access.
-* **Data Integrity:** Configured ZFS Mirror (RAID-1) for bit-rot protection and redundancy.
-* **Backup Strategy:** Automated nightly snapshots of all VMs to a dedicated Proxmox Backup Server instance.
+* **DNS:** AdGuard Home handles local DNS resolution (`app.homelab.local`) and network-wide content filtering.
 
-### 7. Identity & Access Management (SSO)
-**Technology:** Authentik
-* **Goal:** Centralized Identity Provider (IdP) for Single Sign-On.
-* **Integration:** Deployed the full stack (Server, Worker, Redis, Postgres) to replace individual local accounts with a unified authentication layer.
+### 3. Application & Proxy
+* **Reverse Proxy**: Nginx Proxy Manager (NPM) handles SSL termination and routes traffic based on subdomains.
 
-### 8. Infrastructure as Code (IaC)
-**Technology:** Ansible
-* **Inventory:** Hybrid inventory management (SSH for Ubuntu, Root for TrueNAS).
-* **Security:** Used **Ansible Vault** to encrypt sensitive credentials in the repository.
+* **Proxmox Proxy:** Configured with Websocket support to allow secure access to the Proxmox console via standard HTTPS (443)
+
+### 4. Observability Stack
+Monitoring is deployed via Docker Compose on the bare-metal host.
+
+  * **Node Exporter:** Configured with `--net=host` to scrape raw hardware metrics from the Ubuntu kernel.
+
+  * **Prometheus:** Time-series database scraping targets at 15s intervals.
+
+  * **Grafana:** Visualizes metrics using standard Linux Host dashboards (ID 1860).
+
+### 5. Storage & Backups
+* **TrueNAS Scale:** Virtualized with physical disk passthrough (via serial number mapping).
+
+* **ZFS Mirror:** Two-disk mirror (RAID-1) configuration for data redundancy.
+
+* **Backup:** Proxmox Backup Server (PBS) performs incremental nightly snapshots of all critical VMs.
+
+### 6. Automation
+Infrastructure management is handled via **Ansible**.
+* **Inventory:** Defines connection methods for both physical (SSH) and virtual (API/Root) hosts.
 * **Playbooks:**
-    * `update_packages.yml`: Automated OS patching.
-    * `deploy_monitoring.yml`: One-click deployment of the observability stack.
-
+    * `site.yml`: Routine system maintenance and package updates.
+    * `deploy_monitoring.yml`: Automates the deployment of the Docker observability stack.
+  
 ---
 ## How to Run
 ### 1. Prerequisite Setup
@@ -136,25 +128,16 @@ git clone [https://github.com/dannyhng/hybrid-homelab-infrastructure.git](https:
 cd hybrid-homelab-infrastructure
 ```
 
-### 3. Infrastructure Automation (Ansible)
-Update the inventory.ini file with your specific lab IP addresses if they differ from the defaults.
+### 3. Run Automation (Ansible)
+Edit `ansible/inventory/inventory.ini` to match your IP addresses, then run the maintenance playbook:
 ```bash
-# -i points to the inventory file
-# -K prompts for the sudo password (BECOME password)
 ansible-playbook -i ansible/inventory/inventory.ini ansible/playbooks/site.yml -K
 ```
 
-### 4. Deploy Application Stacks (Docker)
-Deploy the Monitoring Stack (Prometheus/Grafana) and Reverse Proxy using Docker Compose.
-
-**Deploy Monitoring:**
+### 4. Deploy Containers
+Deploy the monitoring stack:
 ```bash
 cd docker/monitoring
-docker compose up -d
+docker-compose up -d
 ```
 
-**Deploy Reverse Proxy:**
-```bash
-cd ../proxy
-docker compose up -d
-```
