@@ -12,7 +12,7 @@
 
 This project represents months of iteration, troubleshooting, and rebuilding. What started as a simple desire to apply my CCNA studies evolved into a complex engineering challenge: building a network environment that functions like a production enterprise site, not just a sandbox.
 
-Getting to this state wasn't a straight line. I spent weeks debugging broken routing tables, fixing YAML syntax errors in my automation scripts, and learning how to properly pass physical hardware through a hypervisor. There were plenty of moments where I broke the network and had to start over, but those failures taught me more about system interdependencies than any textbook could. This project bridged the gap between theory and practice for me. It forced me to think like an engineer: prioritizing uptime, security, and scalability.
+Getting to this state wasn't a straight line. I spent months debugging broken routing tables, fixing YAML syntax errors in my automation scripts, and learning how to properly pass physical hardware through a hypervisor. There were plenty of moments where I broke the network and had to start over, but those failures taught me more about system interdependencies than any textbook could. This project bridged the gap between theory and practice for me. It forced me to think like an engineer: prioritizing uptime, security, and scalability.
 
 Here is a detailed breakdown of the final architecture:
 
