@@ -157,5 +157,9 @@ Update `ansible/inventory/inventory.ini` with your specific IP addresses and use
 # Run system maintenance
 ansible-playbook -i ansible/inventory/inventory.ini ansible/playbooks/site.yml
 ```
+---
 
+### 3. The License File
+Professional repos always have a license.
 
+**File:** `LICENSE`
