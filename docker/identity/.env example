@@ -1,0 +1,14 @@
+# PostgreSQL Password (Required)
+PG_PASS=change_me_to_secure_password
+PG_USER=authentik
+PG_DB=authentik
+
+# Authentik Secret Key (Generate with: openssl rand -base64 36)
+AUTHENTIK_SECRET_KEY=change_me_to_random_string
+
+# Error Reporting
+AUTHENTIK_ERROR_REPORTING__ENABLED=true
+
+# Ports
+COMPOSE_PORT_HTTP=9001
+COMPOSE_PORT_HTTPS=9444
