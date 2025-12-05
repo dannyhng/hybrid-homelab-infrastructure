@@ -41,7 +41,8 @@ services:
     depends_on:
       - postgresql
       - redis
-
+    networks:
+      - homelab_net
   worker:
     image: ${AUTHENTIK_IMAGE:-ghcr.io/goauthentik/server}:${AUTHENTIK_TAG:-2024.10.1}
     restart: unless-stopped
@@ -57,7 +58,11 @@ services:
     depends_on:
       - postgresql
       - redis
-
+    networks:
+      - homelab_net
 volumes:
   database:
   redis:
+networks:
+  homelab_net:
+    external: true
