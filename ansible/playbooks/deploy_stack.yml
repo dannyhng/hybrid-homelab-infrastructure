@@ -1,1 +1,33 @@
+---
+- name: Deploy Docker Stacks
+  hosts: compute
+  become: true
+  tasks:
+    - name: Ensure Docker directory exists
+      file:
+        path: /home/{{ ansible_user }}/docker
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
 
+    - name: Copy Monitoring Stack Config
+      copy:
+        src: ../../docker/monitoring/
+        dest: /home/{{ ansible_user }}/docker/monitoring/
+        mode: '0644'
+
+    - name: Deploy Monitoring Stack
+      community.docker.docker_compose_v2:
+        project_src: /home/{{ ansible_user }}/docker/monitoring
+        state: present
+
+    - name: Copy Proxy Stack Config
+      copy:
+        src: ../../docker/proxy/
+        dest: /home/{{ ansible_user }}/docker/proxy/
+        mode: '0644'
+
+    - name: Deploy Proxy Stack
+      community.docker.docker_compose_v2:
+        project_src: /home/{{ ansible_user }}/docker/proxy
+        state: present
