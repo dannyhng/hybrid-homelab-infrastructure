@@ -1,4 +1,5 @@
 # Hybrid Homelab Infrastructure: From Manual Ops to Identity-Aware IaC
+![License](https://img.shields.io/github/license/dannyhng/hybrid-homelab-infrastructure)
 ![Status](https://img.shields.io/badge/Status-Active-success)
 ![Infrastructure](https://img.shields.io/badge/Infrastructure-Proxmox%20VE%20%7C%20Bare%20Metal-orange)
 ![Network](https://img.shields.io/badge/Network-pfSense%20%7C%20AdGuard%20%7C%20NPM-blue)
@@ -7,7 +8,7 @@
 ![Management](https://img.shields.io/badge/Management-Portainer%20%7C%20Ansible-red)
 ![Monitoring](https://img.shields.io/badge/Observability-Prometheus%20%7C%20Grafana-green)
 
-## Project Overview
+# Project Overview
 
 This project represents months of iteration, troubleshooting, and rebuilding. What started as a simple desire to apply my CCNA studies evolved into a complex engineering challenge: building a network environment that functions like a production enterprise site, not just a sandbox.
 
@@ -17,7 +18,7 @@ Here is a detailed breakdown of the final architecture:
 
 ---
 
-## Architecture Topology
+# Architecture Topology
 ```mermaid
 graph TD
     %% --- External Access ---
@@ -119,13 +120,19 @@ Storage was one of the hardest parts to get right. I wanted the flexibility of a
 ---
 # Engineering Challenges & Troubleshooting
 ### Challenge A: Physical Layer Legacy Configuration
-**Symptom:** The Docker host failed to communicate with the router despite correct vSwitch configurations in Proxmox. **Root Cause:** The physical Cisco switch port retained an ACL and VLAN configuration from a previous deployment, silently dropping traffic. **Resolution:** Performed a console wipe of the switch configuration. This reinforced the troubleshooting methodology of verifying Layer 1 connectivity before debugging upper-layer software stacks.
+**Symptom:** The Docker host couldn’t talk to the router even though the Proxmox vSwitch settings looked correct.  
+**Root Cause:** A Cisco switch port still had old ACL and VLAN settings from a previous setup, quietly dropping traffic.  
+**Resolution:** Cleared the switch configuration, restoring connectivity. This highlighted how important it is to confirm physical-layer settings before digging into higher-level issues.  
 
 ### Challenge B: DNS Resolution Conflicts
-**Symptom:** Internal domain resolution (`.local`) failed despite successful IP connectivity. **Root Cause:** A conflict between Ubuntu's `systemd-resolved`, the Tailscale daemon, and the AdGuard container all attempting to bind to Port 53. **Resolution:** Manually configured the Linux DNS priority order, forcing internal queries to the AdGuard resolver while allowing the host system to maintain upstream connectivity.
+**Symptom:** Internal `.local` domains wouldn’t resolve, even though the host could reach everything by IP.  
+**Root Cause:** Ubuntu’s systemd-resolved, Tailscale, and the AdGuard container were all trying to use Port 53, creating a DNS conflict.   
+**Resolution:** Manually configured the Linux DNS priority order, forcing internal queries to the AdGuard resolver while allowing the host system to maintain upstream connectivity.  
 
 ### Challenge C: PostgreSQL Database Deadlock (IAM Rollout)
-**Symptom:** The Authentik initialization process hung indefinitely during the first deployment. **Root Cause:** A race condition occurred where the server and worker processes attempted to write to the PostgreSQL database simultaneously during the initial blueprint application, causing a transaction deadlock. **Resolution:** Diagnosed the lock via container logs and implemented a staggered restart sequence to clear the race condition, successfully initializing the IdP.
+**Symptom:** The Authentik initialization process hung indefinitely during the first deployment.   
+**Root Cause:** A race condition between the server and worker containers caused both to write to the PostgreSQL database at the same time, triggering a deadlock.   
+**Resolution:** Found the issue through container logs and used a staggered restart to clear the lock, allowing Authentik to initialize properly   
 
 # Automation (Ansible)
 To move away from manual "ClickOps," I implemented Ansible for configuration management.
@@ -157,9 +164,11 @@ Update `ansible/inventory/inventory.ini` with your specific IP addresses and use
 # Run system maintenance
 ansible-playbook -i ansible/inventory/inventory.ini ansible/playbooks/site.yml
 ```
----
 
-### 3. The License File
-Professional repos always have a license.
+#### 4. Save It
+1.  Scroll to the bottom.
+2.  Click the green **"Commit changes..."** button.
+3.  Message: "Update README with architecture and diagrams".
+4.  Click **"Commit changes"**.
 
-**File:** `LICENSE`
+You can now go to the main page of your repo. You should see a professional README with a live flowchart diagram!
