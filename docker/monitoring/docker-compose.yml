@@ -1,20 +1,28 @@
 services:
-  # 1. The Metric Collector
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporter
+    command:
+      - '--path.rootfs=/host'
+    # ENGINEER NOTE: Using host networking to scrape raw kernel metrics
+    # from the bare metal hardware, bypassing Docker isolation.
+    network_mode: host
+    pid: host
+    restart: unless-stopped
+    volumes:
+      - '/:/host:ro,rslave'
+
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
     restart: unless-stopped
-    volumes:
-      # Maps our config file into the container
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      # Persists the database so we don't lose data on restart
-      - prometheus_data:/prometheus
     ports:
       - "9090:9090"
-    networks:
-      - monitoring
+    volumes:
+      - prometheus_data:/prometheus
+      # Map your local config file here if you have one
+      # - ./prometheus.yml:/etc/prometheus/prometheus.yml
 
-  # 2. The Visualizer (The Dashboard)
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
@@ -23,25 +31,10 @@ services:
       - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
-    networks:
-      - monitoring
-    depends_on:
-      - prometheus
-
-  # 3. The Agent (Getting CPU/RAM stats)
-  node-exporter:
-    image: prom/node-exporter:latest
-    container_name: node-exporter
-    restart: unless-stopped
-    ports:
-      - "9100:9100"
-    networks:
-      - monitoring
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin  # Changed on first login
 
 volumes:
   prometheus_data:
   grafana_data:
-
-networks:
-  monitoring:
-    driver: bridge
