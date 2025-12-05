@@ -1,22 +1,8 @@
-# --- OS Junk ---
-.DS_Store
-Thumbs.db
-*.swp
+.env
+*.env
 
-# --- Ansible ---
 *.retry
 *.log
 
-# --- Python ---
-__pycache__/
-*.pyc
-
-# --- Secrets & Local Data (CRITICAL) ---
-.env
-id_rsa
-*.pem
-
-# --- Docker Volume Data ---
-# We want the config code, but NOT the database data or SSL certs
-docker/proxy/data/
-docker/proxy/letsencrypt/
+.DS_Store
+Thumbs.db
