@@ -1,0 +1,11 @@
+name: CI Validation
+on: [push]
+jobs:
+  validate-yaml:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: YAML Syntax Checker
+        uses: ibiqlik/action-yamllint@v3
+        with:
+          strict: true
