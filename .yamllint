@@ -1,0 +1,14 @@
+extends: default
+
+rules:
+  # Docker Compose lines are often long (URLs, commands). Disable this check.
+  line-length: disable
+
+  # We don't need to start every file with '---'. It's annoying.
+  document-start: disable
+
+  # Allow "yes" and "on" without quotes (GitHub Actions needs 'on').
+  truthy: disable
+
+  # Allow comments to be close to code
+  comments: disable
